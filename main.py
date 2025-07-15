@@ -6,6 +6,7 @@ import json
 from typing import Dict
 import logging
 from api import police
+from api import ia
 
 
 from database.database import engine
@@ -38,6 +39,7 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(police.router, prefix="/api")
+app.include_router(ia.router, prefix="/api")
 
 # Cargar cámaras desde archivo
 def cargar_camaras():
