@@ -6,6 +6,7 @@ import json
 from typing import Dict
 import logging
 from api import police
+from api import ia
 
 
 from database.database import engine
@@ -20,7 +21,7 @@ Base.metadata.create_all(bind=engine)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Polcias API")
+app = FastAPI(title="Kuntur API")
 
 # Almacén para conexiones WebSocket activas
 active_connections: Dict[str, WebSocket] = {}
@@ -38,6 +39,7 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(police.router, prefix="/api")
+app.include_router(ia.router, prefix="/api")
 
 # Cargar cámaras desde archivo
 def cargar_camaras():
