@@ -7,6 +7,7 @@ import logging
 import pymongo
 from schema.alerta_schema import AlertaRequest
 from repository.alerta_repository import AlertaRepository
+from services.police import generar_parte_policial
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -31,4 +32,6 @@ async def recibir_alerta(data: AlertaRequest):
     # Guardar en MongoDB usando el repositorio
     repo = AlertaRepository()
     mongo_id = repo.insertar_alerta(data.dict())
-    return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id}
+    # Generar parte policial con IA
+    parte_policial = generar_parte_policial(data)
+    return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id, "parte_policial": parte_policial}
