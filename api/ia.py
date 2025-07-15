@@ -4,39 +4,31 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional, Dict
 import logging
+import pymongo
+from schema.alerta_schema import AlertaRequest
+from repository.alerta_repository import AlertaRepository
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Modelo Pydantic para el body
-class Dispositivo(BaseModel):
-    id: Optional[str]
-    tipo: Optional[str]
-    ip: Optional[str]
+# Configuración de MongoDB
+MONGO_URI = "mongodb+srv://USR-Multimedia:Multi12345@cluster0.utjyivv.mongodb.net/?retryWrites=true&w=majority"
+DB_NAME = "USR-Multimedia"
 
-class Coordenadas(BaseModel):
-    lat: float
-    lng: float
+mongo_client = pymongo.MongoClient(MONGO_URI)
+db = mongo_client[DB_NAME]
+alertas_collection = db["alertas"]
 
-class AlertaRequest(BaseModel):
-    alerta: Optional[str]
-    coordenadas: Coordenadas
-    descripcion: str
-    dispositivo: Dispositivo
-    duracionVideo: Optional[int]
-    fecha: str
-    hora: str
-    nivelConfianza: str
-    nombrePolicia: str
-    palabrasClave: str
-    pnc: str
-    rango: str
-    ubicacion: str
+
+# Eliminar las definiciones duplicadas de Dispositivo, Coordenadas y AlertaRequest aquí
 
 @router.post("/ia/recibir_alerta")
 async def recibir_alerta(data: AlertaRequest):
     logger.info(f"Alerta recibida: {data.dict()}")
     print("Alerta recibida:", data.dict())
-    return {"mensaje": "Alerta recibida", "data": data.dict()}
+    # Guardar en MongoDB usando el repositorio
+    repo = AlertaRepository()
+    mongo_id = repo.insertar_alerta(data.dict())
+    return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id}
