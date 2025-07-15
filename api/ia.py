@@ -7,7 +7,8 @@ import logging
 import pymongo
 from schema.alerta_schema import AlertaRequest
 from repository.alerta_repository import AlertaRepository
-from services.police import generar_parte_policial
+from services.police import generar_parte_policial, generar_pdf_parte_policial
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -34,4 +35,13 @@ async def recibir_alerta(data: AlertaRequest):
     mongo_id = repo.insertar_alerta(data.dict())
     # Generar parte policial con IA
     parte_policial = generar_parte_policial(data)
-    return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id, "parte_policial": parte_policial}
+    try:
+        pdf_bytes = generar_pdf_parte_policial(parte_policial)
+        return StreamingResponse(
+            iter([pdf_bytes]),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=parte_policial.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"Error generando PDF: {e}")
+        return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id, "parte_policial": parte_policial}
