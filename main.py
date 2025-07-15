@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from api import police
 
 from database.database import engine
@@ -9,6 +10,14 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Polcias API")
 
-# Incluir routers
+# Habilitar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permitir todos los orígenes, puedes restringir según necesidad
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# Incluir routers
 app.include_router(police.router, prefix="/api")
