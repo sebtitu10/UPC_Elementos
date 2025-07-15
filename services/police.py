@@ -27,7 +27,7 @@ def generar_parte_policial(alerta: AlertaRequest) -> Dict:
     
     Redacta el parte policial de la mejor manera posible:
     """
-    openai.api_key = os.getenv("OPENAI_API_KEY", "sk-...pon-tu-clave...")
+    openai.api_key = os.getenv("OPENAI_API_KEY", "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")
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
