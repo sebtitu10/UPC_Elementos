@@ -55,14 +55,14 @@ async def recibir_evento(request: Request):
         "device_id": "CAM-UPC-01",
         "device_type": "camera",
         "location": "Quito - La Mariscal",
-        "alert_information": "Estoy viendo a tres personas armadas",
+        "alert_information": "Test",
         "cordinates": {
             "latitude": -0.22985,
             "longitude": -78.52495
         },
         "date": "2023-10-01",
         "time": "18:20:30",
-        "stream_url": "rtsp://192.168.1.10/live",
+        "stream_url": "http://192.168.11.105:4747/video",
         "transcription_video": "Se observan dos individuos corriendo por la calle armados con pistolas.",
         "transcription_audio": None,
         "media_duration": 120,
@@ -93,23 +93,27 @@ async def recibir_evento(request: Request):
 
 # Página principal
 
-# Vista de cámara
-@app.get("/ver_camara", response_class=HTMLResponse)
-async def ver_camara(request: Request, ip: str):
-    return templates.TemplateResponse("camera_view.html", {"request": request, "ip": ip})
-
-# WebSocket para cámaras
-@app.websocket("/ws/{camara_id}")
-async def websocket_endpoint(websocket: WebSocket, camara_id: str):
-    await websocket.accept()
-    logger.info(f"Cliente conectado por WebSocket para cámara {camara_id}")
-    active_connections[camara_id] = websocket
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
     try:
+        await websocket.accept()
+        active_connections[client_id] = websocket
+        logger.info(f"WebSocket conectado para cliente {client_id}")
+        
+        # Mantener la conexión activa
         while True:
-            # Mantener la conexión abierta
-            data = await websocket.receive_text()
+            try:
+                # Esperar por mensajes del cliente (opcional)
+                data = await websocket.receive_text()
+                logger.info(f"Mensaje recibido de {client_id}: {data}")
+            except Exception as e:
+                logger.error(f"Error en WebSocket {client_id}: {e}")
+                break
+                
     except Exception as e:
-        logger.error(f"Error en WebSocket para cámara {camara_id}: {e}")
+        logger.error(f"Error en conexión WebSocket {client_id}: {e}")
     finally:
-        active_connections.pop(camara_id, None)
-        logger.info(f"Cliente desconectado del WebSocket para cámara {camara_id}")
+        # Limpiar conexión cuando se desconecte
+        if client_id in active_connections:
+            del active_connections[client_id]
+            logger.info(f"WebSocket desconectado para cliente {client_id}")
