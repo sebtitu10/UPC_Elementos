@@ -93,3 +93,27 @@ async def recibir_evento(request: Request):
 
 # Página principal
 
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    try:
+        await websocket.accept()
+        active_connections[client_id] = websocket
+        logger.info(f"WebSocket conectado para cliente {client_id}")
+        
+        # Mantener la conexión activa
+        while True:
+            try:
+                # Esperar por mensajes del cliente (opcional)
+                data = await websocket.receive_text()
+                logger.info(f"Mensaje recibido de {client_id}: {data}")
+            except Exception as e:
+                logger.error(f"Error en WebSocket {client_id}: {e}")
+                break
+                
+    except Exception as e:
+        logger.error(f"Error en conexión WebSocket {client_id}: {e}")
+    finally:
+        # Limpiar conexión cuando se desconecte
+        if client_id in active_connections:
+            del active_connections[client_id]
+            logger.info(f"WebSocket desconectado para cliente {client_id}")
