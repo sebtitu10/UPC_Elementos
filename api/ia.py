@@ -77,20 +77,26 @@ async def recibir_alerta(data: AlertaRequest):
     # Buscar el usuario que viene en la alerta
     telefono_usuario = None
     if data.user:
+        print(f"Buscando teléfono para usuario: {data.user}")
         db = SessionLocal()
         usuario_service = UsuarioService(db)
         telefono_usuario = usuario_service.obtener_telefono_por_username(data.user)
         db.close()
+        print(f"Teléfono encontrado: {telefono_usuario}")
     # Guardar en MongoDB usando el repositorio
     repo = AlertaRepository()
     mongo_id = repo.insertar_alerta(data.dict())
+    print(f"Alerta guardada en MongoDB con id: {mongo_id}")
     # Generar parte policial con IA
     parte_policial = generar_parte_policial(data)
+    print("Parte policial generado:", parte_policial)
     # Guardar el parte policial en la colección 'parte'
     parte_repo = ParteRepository()
     parte_id = parte_repo.insertar_parte(parte_policial)
+    print(f"Parte policial guardado en MongoDB con id: {parte_id}")
     try:
         pdf_bytes = generar_pdf_parte_policial(parte_policial)
+        print("PDF generado correctamente")
         # Subir el PDF a GitHub Pages con un nombre único por parte_id
         nombre_pdf = f"parte_policial_{parte_id}.pdf"
         url_publica = subir_pdf_a_github(
@@ -100,6 +106,7 @@ async def recibir_alerta(data: AlertaRequest):
             "ejcondorf88",             # Tu usuario
             "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"  # Tu token
         )
+        print(f"PDF subido a GitHub Pages: {url_publica}")
         if telefono_usuario and url_publica:
             telefono_limpio = ''.join(filter(str.isdigit, telefono_usuario))
             # Si el número empieza con 0, reemplazar por 593 (Ecuador)
@@ -109,11 +116,13 @@ async def recibir_alerta(data: AlertaRequest):
                 telefono_int = telefono_limpio
             else:
                 telefono_int = '593' + telefono_limpio  # fallback
-            mensaje = f"Hola, aquí está tu parte policial: {url_publica}"
+            mensaje = f"Hola, aquí está una copia  parte policial: {url_publica}"
             mensaje_codificado = urllib.parse.quote(mensaje)
             wa_link = f"https://wa.me/{telefono_int}?text={mensaje_codificado}"
+            print(f"Enlace de WhatsApp generado: {wa_link}")
         else:
             wa_link = None
+            print("No se pudo generar el enlace de WhatsApp (faltan datos)")
         return {
             "mensaje": "Alerta recibida, guardada y PDF generado",
             "mongo_id": mongo_id,
@@ -125,6 +134,7 @@ async def recibir_alerta(data: AlertaRequest):
         }
     except Exception as e:
         logger.error(f"Error generando PDF: {e}")
+        print(f"Error generando PDF: {e}")
         return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id, "parte_policial": parte_policial}
 
 
