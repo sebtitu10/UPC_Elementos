@@ -19,3 +19,11 @@ class Policia(Base):
     __table_args__ = (
         CheckConstraint("estado IN ('activo', 'inactivo')", name="check_estado_valido"),
     )
+
+class Usuario(Base):
+    __tablename__ = 'usuarios'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), nullable=False)
+    telefono = Column(String(15), nullable=False)
+
