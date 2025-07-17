@@ -81,7 +81,7 @@ def generar_pdf_parte_policial(parte: dict) -> bytes:
 
     # Logo y título
     pdf.image("imagenes/Escudo_Policia.png", x=180, y=18, w=18)
-    pdf.image("imagenes/Color=Black.png", x=160, y=20, w=18)
+    pdf.image("imagenes/kuntur-icon.png", x=160, y=20, w=18)
     pdf.set_xy(10, 20)
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 7, "REPÚBLICA DEL ECUADOR MINISTERIO DE GOBIERNO", ln=True, align="L")
