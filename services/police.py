@@ -6,7 +6,7 @@ from fpdf import FPDF
 import tempfile
 
 # Configurar la API key de OpenAI
-openai.api_key = "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"
+openai.api_key = "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"
 
 def generar_parte_policial(alerta: AlertaRequest) -> Dict:
     """
@@ -32,14 +32,12 @@ def generar_parte_policial(alerta: AlertaRequest) -> Dict:
     """
     
     try:
-        # Usar la nueva sintaxis de OpenAI (v1.0+)
-        client = openai.OpenAI(api_key=openai.api_key)
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=400
         )
-        parte_texto = response.choices[0].message.content.strip()
+        parte_texto = response.choices[0].message['content'].strip()
         
     except Exception as e:
         # Fallback en caso de error con la API
