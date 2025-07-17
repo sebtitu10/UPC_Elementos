@@ -18,9 +18,11 @@ class AlertaRequest(BaseModel):
     duracionVideo: Optional[int] = None
     fecha: Optional[str] = None
     hora: Optional[str] = None
-    nivelConfianza: Optional[str] = None
+    nivelConfianza: Optional[float] = None
     nombrePolicia: Optional[str] = None
     palabrasClave: Optional[str] = None
     pnc: Optional[str] = None
     rango: Optional[str] = None
     ubicacion: Optional[str] = None 
+    codigoDelito: Optional[str] = None
+    user: Optional[str] = None 

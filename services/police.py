@@ -112,6 +112,7 @@ def generar_pdf_parte_policial(parte: dict) -> bytes:
     pdf.cell(50, 6, f"Fecha Elaboración: {parte.get('fecha', '')}", ln=False)
     pdf.cell(60, 6, f"Parte Policial No.: {parte.get('pnc', '')}", ln=False)
     pdf.cell(0, 6, f"Rango: {parte.get('rango', '')}", ln=True)
+    pdf.cell(0, 6, f"Nombre del denunciante: {parte.get('user', '')}", ln=True)
     pdf.cell(50, 6, f"Unidad Policial: {parte.get('dispositivo', {}).get('tipo', '')}", ln=False)
     pdf.cell(60, 6, f"ID Dispositivo: {parte.get('dispositivo', {}).get('id', '')}", ln=False)
     pdf.cell(0, 6, f"IP: {parte.get('dispositivo', {}).get('ip', '')}", ln=True)
