@@ -14,6 +14,8 @@ from fastapi import Request
 from services.police import subir_pdf_a_github
 from services.usuario_service import UsuarioService
 from database.database import SessionLocal
+from bson import ObjectId
+import urllib.parse
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +62,14 @@ class WebhookResponse(BaseModel):
     respuesta_ficticia: Dict[str, Any]
 
 
+def fix_objectid(doc):
+    if isinstance(doc, dict):
+        for k, v in doc.items():
+            if isinstance(v, ObjectId):
+                doc[k] = str(v)
+    return doc
+
+
 @router.post("/ia/recibir_alerta")
 async def recibir_alerta(data: AlertaRequest):
     logger.info(f"Alerta recibida: {data.dict()}")
@@ -81,21 +91,37 @@ async def recibir_alerta(data: AlertaRequest):
     parte_id = parte_repo.insertar_parte(parte_policial)
     try:
         pdf_bytes = generar_pdf_parte_policial(parte_policial)
-        # Subir el PDF a GitHub Pages
+        # Subir el PDF a GitHub Pages con un nombre único por parte_id
+        nombre_pdf = f"parte_policial_{parte_id}.pdf"
         url_publica = subir_pdf_a_github(
             pdf_bytes,
-            "parte_policial.pdf",      # Puedes personalizar el nombre
-            "UPC_Elementos",           # Tu repo
+            nombre_pdf,
+            "pdfs",           # Tu repo
             "ejcondorf88",             # Tu usuario
-            "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"  # Tu token
+            "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"  # Tu token
         )
+        if telefono_usuario and url_publica:
+            telefono_limpio = ''.join(filter(str.isdigit, telefono_usuario))
+            # Si el número empieza con 0, reemplazar por 593 (Ecuador)
+            if telefono_limpio.startswith('0'):
+                telefono_int = '593' + telefono_limpio[1:]
+            elif telefono_limpio.startswith('593'):
+                telefono_int = telefono_limpio
+            else:
+                telefono_int = '593' + telefono_limpio  # fallback
+            mensaje = f"Hola, aquí está tu parte policial: {url_publica}"
+            mensaje_codificado = urllib.parse.quote(mensaje)
+            wa_link = f"https://wa.me/{telefono_int}?text={mensaje_codificado}"
+        else:
+            wa_link = None
         return {
             "mensaje": "Alerta recibida, guardada y PDF generado",
             "mongo_id": mongo_id,
-            "parte_policial": parte_policial,
+            "parte_policial": fix_objectid(parte_policial),
             "parte_id": parte_id,
             "telefono_usuario": telefono_usuario,
-            "url_pdf": url_publica
+            "url_pdf": url_publica,
+            "whatsapp_link": wa_link
         }
     except Exception as e:
         logger.error(f"Error generando PDF: {e}")

@@ -6,7 +6,7 @@ from fpdf import FPDF
 import tempfile
 
 # Configurar la API key de OpenAI
-openai.api_key = "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"
+openai.api_key = "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"
 
 def generar_parte_policial(alerta: AlertaRequest) -> Dict:
     """
