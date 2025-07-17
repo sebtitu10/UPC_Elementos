@@ -68,73 +68,122 @@ def generar_parte_policial(alerta: AlertaRequest) -> Dict:
 
 def generar_pdf_parte_policial(parte: dict) -> bytes:
     """
-    Genera un PDF del parte policial
+    Genera un PDF del parte policial con formato oficial similar al ejemplo proporcionado.
     """
     pdf = FPDF()
     pdf.add_page()
-    
-    # Encabezado
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "República del Ecuador", ln=True, align="C")
-    pdf.cell(0, 10, "Policía Nacional del Ecuador", ln=True, align="C")
-    pdf.ln(5)
-    
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "PARTE POLICIAL", ln=True, align="C")
-    pdf.ln(10)
+    pdf.set_auto_page_break(auto=True, margin=15)
 
-    # Información básica
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"Fecha: {parte.get('fecha', '')}    Hora: {parte.get('hora', '')}", ln=True)
-    pdf.cell(0, 10, f"Lugar: {parte.get('ubicacion', '')}", ln=True)
-    
-    coords = parte.get("coordenadas", {})
-    pdf.cell(0, 10, f"Coordenadas: Lat {coords.get('lat', '')}, Lng {coords.get('lng', '')}", ln=True)
-    pdf.cell(0, 10, f"Nombre del policía: {parte.get('nombre_policia', '')}", ln=True)
-    pdf.cell(0, 10, f"Rango: {parte.get('rango', '')}", ln=True)
-    pdf.cell(0, 10, f"PNC: {parte.get('pnc', '')}", ln=True)
-    
-    dispositivo = parte.get("dispositivo", {})
-    pdf.cell(0, 10, f"Dispositivo: {dispositivo.get('tipo', '')} - ID: {dispositivo.get('id', '')} - IP: {dispositivo.get('ip', '')}", ln=True)
-    pdf.ln(10)
+    # Encabezado superior
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(120, 8, f"Parte No.  {parte.get('pnc', '')}", border=0)
+    pdf.cell(0, 8, f"Fecha y hora de impresión:  {parte.get('fecha', '')}    {parte.get('hora', '')}", border=0, ln=True, align="R")
 
-    # Descripción de los hechos
+    # Logo y título
+    pdf.image("imagenes/Escudo_Policia.png", x=180, y=18, w=18)
+    pdf.image("imagenes/Color=Black.png", x=160, y=20, w=18)
+    pdf.set_xy(10, 20)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Descripción de los hechos:", ln=True)
-    pdf.set_font("Arial", "", 12)
-    
-    # Manejar texto largo con multi_cell
+    pdf.cell(0, 7, "REPÚBLICA DEL ECUADOR MINISTERIO DE GOBIERNO", ln=True, align="L")
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 7, "NOTICIA DEL INCIDENTE", ln=True, align="L")
+    pdf.ln(2)
+
+    # Información de los aprehendidos/detenidos (simulada con nombre del policía)
+    pdf.set_fill_color(220, 220, 220)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Información de los aprehendidos/detenidos", ln=True, fill=True)
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(10, 7, "No", border=1, align="C")
+    pdf.cell(60, 7, "Nombre del Aprehendido", border=1, align="C")
+    pdf.cell(40, 7, "Cédula", border=1, align="C")
+    pdf.cell(40, 7, "Fecha Aprehensión", border=1, align="C")
+    pdf.cell(30, 7, "Hora Aprehensión", border=1, ln=True, align="C")
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(10, 7, "1", border=1, align="C")
+    pdf.cell(60, 7, parte.get("nombre_policia", ""), border=1)
+    pdf.cell(40, 7, parte.get("pnc", ""), border=1)
+    pdf.cell(40, 7, parte.get("fecha", ""), border=1)
+    pdf.cell(30, 7, parte.get("hora", ""), border=1, ln=True)
+    pdf.ln(2)
+
+    # Información general
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Información general", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(50, 6, f"Fecha Elaboración: {parte.get('fecha', '')}", ln=False)
+    pdf.cell(60, 6, f"Parte Policial No.: {parte.get('pnc', '')}", ln=False)
+    pdf.cell(0, 6, f"Rango: {parte.get('rango', '')}", ln=True)
+    pdf.cell(50, 6, f"Unidad Policial: {parte.get('dispositivo', {}).get('tipo', '')}", ln=False)
+    pdf.cell(60, 6, f"ID Dispositivo: {parte.get('dispositivo', {}).get('id', '')}", ln=False)
+    pdf.cell(0, 6, f"IP: {parte.get('dispositivo', {}).get('ip', '')}", ln=True)
+    pdf.ln(2)
+
+    # Información de la unidad de policía
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Información de la unidad de policía que intervino en el hecho", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.multi_cell(0, 6, f"{parte.get('descripcion', '')}")
+    pdf.ln(1)
+
+    # Información geográfica y cronológica del evento
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Información geográfica y cronológica del evento", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
+    coords = parte.get("coordenadas", {})
+    pdf.cell(60, 6, f"Latitud: {coords.get('lat', '')}", ln=False)
+    pdf.cell(60, 6, f"Longitud: {coords.get('lng', '')}", ln=False)
+    pdf.cell(0, 6, f"Lugar: {parte.get('ubicacion', '')}", ln=True)
+    pdf.cell(60, 6, f"Fecha del Hecho: {parte.get('fecha', '')}", ln=False)
+    pdf.cell(60, 6, f"Hora aproximada: {parte.get('hora', '')}", ln=True)
+    pdf.ln(2)
+
+    # Clasificación del parte
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Clasificación del parte", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(0, 6, "Tipo: JUDICIAL", ln=True)
+    pdf.ln(1)
+
+    # Información del hecho
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Información del hecho", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(60, 6, "Solicitado Por: ORDEN DE SERVICIO", ln=False)
+    pdf.cell(60, 6, "Presunta flagrancia: NO", ln=False)
+    pdf.cell(0, 6, "Tipo Operativo: ORDINARIO", ln=True)
+    pdf.cell(0, 6, "Operativo: OPERATIVO ANTI DELINCUENCIALES", ln=True)
+    pdf.ln(1)
+
+    # Circunstancias del hecho
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Circunstancias del hecho", ln=True, fill=True)
+    pdf.set_font("Arial", "", 9)
     descripcion = parte.get("parte_ia", "")
     if descripcion:
-        pdf.multi_cell(0, 10, descripcion.encode('latin-1', 'replace').decode('latin-1'))
-    pdf.ln(5)
+        pdf.multi_cell(0, 6, descripcion.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(2)
 
     # Palabras clave y nivel de confianza
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Palabras clave:", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, str(parte.get("palabras_clave", "")), ln=True)
-    pdf.cell(0, 10, f"Nivel de confianza: {parte.get('nivel_confianza', '')}", ln=True)
-    pdf.ln(15)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 7, "Palabras clave:", ln=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(0, 6, str(parte.get("palabras_clave", "")), ln=True)
+    pdf.cell(0, 6, f"Nivel de confianza: {parte.get('nivel_confianza', '')}", ln=True)
+    pdf.ln(5)
 
-    # Firma
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, "__________________________", ln=True, align="R")
-    pdf.cell(0, 10, "Firma del policía actuante", ln=True, align="R")
+    # Pie de página
+    pdf.set_y(-20)
+    pdf.set_font("Arial", "I", 8)
+    pdf.cell(0, 10, f"Página {pdf.page_no()} de 1", align="C")
 
     # Generar PDF en memoria
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
             pdf.output(tmp.name)
-            
-        # Leer el archivo generado
         with open(tmp.name, 'rb') as f:
             pdf_bytes = f.read()
-            
-        # Limpiar archivo temporal
         os.unlink(tmp.name)
-        
         return pdf_bytes
-        
     except Exception as e:
         raise Exception(f"Error al generar PDF: {str(e)}")
