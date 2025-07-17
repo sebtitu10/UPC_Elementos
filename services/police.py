@@ -6,7 +6,7 @@ from fpdf import FPDF
 import tempfile
 
 # Configurar la API key de OpenAI
-openai.api_key = "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"
+openai.api_key = "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"
 
 def generar_parte_policial(alerta: AlertaRequest) -> Dict:
     """
@@ -185,3 +185,44 @@ def generar_pdf_parte_policial(parte: dict) -> bytes:
         return pdf_bytes
     except Exception as e:
         raise Exception(f"Error al generar PDF: {str(e)}")
+
+import base64
+import requests
+
+def subir_pdf_a_github(pdf_bytes, nombre_archivo, repo, usuario, token, branch="main", carpeta="pdfs"):
+    """
+    Sube un archivo PDF a un repositorio de GitHub usando la API.
+    """
+    url = f"https://api.github.com/repos/{usuario}/{repo}/contents/{carpeta}/{nombre_archivo}"
+    mensaje_commit = f"Subir parte policial {nombre_archivo}"
+    contenido_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+    data = {
+        "message": mensaje_commit,
+        "content": contenido_base64,
+        "branch": branch
+    }
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    response = requests.put(url, json=data, headers=headers)
+    if response.status_code in [200, 201]:
+        print("Archivo subido correctamente.")
+        url_pages = f"https://{usuario}.github.io/{repo}/{carpeta}/{nombre_archivo}"
+        return url_pages
+    else:
+        print("Error al subir el archivo:", response.json())
+        return None
+
+# Ejemplo de integración después de generar el PDF
+# (Descomenta y adapta según tu flujo real)
+# parte = ... # Tu objeto parte generado previamente
+# pdf_bytes = generar_pdf_parte_policial(parte)
+# url_publica = subir_pdf_a_github(
+#     pdf_bytes,
+#     "parte_policial.pdf",      # O el nombre que desees
+#     "UPC_Elementos",           # Tu repo
+#     "ejcondorf88",             # Tu usuario
+#     "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"  # Tu token
+# )
+# print("URL pública del PDF:", url_publica)

@@ -7,9 +7,11 @@ import logging
 import pymongo
 from schema.alerta_schema import AlertaRequest
 from repository.alerta_repository import AlertaRepository
+from repository.parte_repository import ParteRepository
 from services.police import generar_parte_policial, generar_pdf_parte_policial
 from fastapi.responses import StreamingResponse
 from fastapi import Request
+from services.police import subir_pdf_a_github
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -65,13 +67,26 @@ async def recibir_alerta(data: AlertaRequest):
     mongo_id = repo.insertar_alerta(data.dict())
     # Generar parte policial con IA
     parte_policial = generar_parte_policial(data)
+    # Guardar el parte policial en la colección 'parte'
+    parte_repo = ParteRepository()
+    parte_id = parte_repo.insertar_parte(parte_policial)
     try:
         pdf_bytes = generar_pdf_parte_policial(parte_policial)
-        return StreamingResponse(
-            iter([pdf_bytes]),
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=parte_policial.pdf"}
+        # Subir el PDF a GitHub Pages
+        url_publica = subir_pdf_a_github(
+            pdf_bytes,
+            "parte_policial.pdf",      # Puedes personalizar el nombre
+            "UPC_Elementos",           # Tu repo
+            "ejcondorf88",             # Tu usuario
+            "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"  # Tu token
         )
+        return {
+            "mensaje": "Alerta recibida, guardada y PDF generado",
+            "mongo_id": mongo_id,
+            "parte_policial": parte_policial,
+            "parte_id": parte_id,
+            "url_pdf": url_publica
+        }
     except Exception as e:
         logger.error(f"Error generando PDF: {e}")
         return {"mensaje": "Alerta recibida y guardada", "data": data.dict(), "mongo_id": mongo_id, "parte_policial": parte_policial}
