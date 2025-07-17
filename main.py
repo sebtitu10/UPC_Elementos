@@ -7,10 +7,12 @@ from typing import Dict
 import logging
 from api import police
 from api import ia
+from api import user
 
 
 from database.database import engine
 from database.models import Base
+
 
 
 # Crear las tablas en la base de datos
@@ -40,6 +42,8 @@ app.add_middleware(
 # Incluir routers
 app.include_router(police.router, prefix="/api")
 app.include_router(ia.router, prefix="/api")
+app.include_router(user.router, prefix="/api")
+
 
 # Cargar cámaras desde archivo
 def cargar_camaras():
