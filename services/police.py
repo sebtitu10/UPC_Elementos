@@ -172,7 +172,13 @@ def generar_pdf_parte_policial(parte: dict) -> bytes:
     pdf.cell(0, 6, f"Nivel de confianza: {parte.get('nivel_confianza', '')}", ln=True)
     pdf.ln(5)
 
-    # Pie de página
+    # Pie de página con imagen de firma
+    pdf.set_y(-35)
+    try:
+        pdf.image("imagenes/Firmas_cover.png", x=pdf.w/2-30, y=pdf.get_y(), w=40)
+    except Exception:
+        pdf.set_font("Arial", "I", 8)
+        pdf.cell(0, 10, "[Firma no disponible]", ln=True, align="C")
     pdf.set_y(-20)
     pdf.set_font("Arial", "I", 8)
     pdf.cell(0, 10, f"Página {pdf.page_no()} de 1", align="C")
