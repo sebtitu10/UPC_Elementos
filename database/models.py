@@ -27,3 +27,11 @@ class Usuario(Base):
     username = Column(String(100), nullable=False)
     telefono = Column(String(15), nullable=False)
 
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False)
+    nombre = Column(String(100))
+    email = Column(String(100))
+

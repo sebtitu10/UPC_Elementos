@@ -12,6 +12,8 @@ from services.police import generar_parte_policial, generar_pdf_parte_policial
 from fastapi.responses import StreamingResponse
 from fastapi import Request
 from services.police import subir_pdf_a_github
+from services.usuario_service import UsuarioService
+from database.database import SessionLocal
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -62,6 +64,13 @@ class WebhookResponse(BaseModel):
 async def recibir_alerta(data: AlertaRequest):
     logger.info(f"Alerta recibida: {data.dict()}")
     print("Alerta recibida:", data.dict())
+    # Buscar el usuario que viene en la alerta
+    telefono_usuario = None
+    if data.user:
+        db = SessionLocal()
+        usuario_service = UsuarioService(db)
+        telefono_usuario = usuario_service.obtener_telefono_por_username(data.user)
+        db.close()
     # Guardar en MongoDB usando el repositorio
     repo = AlertaRepository()
     mongo_id = repo.insertar_alerta(data.dict())
@@ -85,6 +94,7 @@ async def recibir_alerta(data: AlertaRequest):
             "mongo_id": mongo_id,
             "parte_policial": parte_policial,
             "parte_id": parte_id,
+            "telefono_usuario": telefono_usuario,
             "url_pdf": url_publica
         }
     except Exception as e:
