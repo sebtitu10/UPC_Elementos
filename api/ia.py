@@ -104,7 +104,7 @@ async def recibir_alerta(data: AlertaRequest):
             nombre_pdf,
             "pdfs",           # Tu repo
             "ejcondorf88",             # Tu usuario
-            "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"  # Tu token
+            "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"  # Tu token
         )
         print(f"PDF subido a GitHub Pages: {url_publica}")
         if telefono_usuario and url_publica:
