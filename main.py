@@ -7,6 +7,7 @@ from typing import Dict
 import logging
 import pika, ssl  # <-- Agregar pika y ssl para RabbitMQ
 import time
+import threading
 
 from api import police
 from api import ia
@@ -53,7 +54,28 @@ def cargar_camaras():
     with open("cameras.json") as f:
         return json.load(f)
 
-# --- Almacenamiento temporal para mensajes no ACKed ---
+# Configuración RabbitMQ
+rabbitmq_host = 'fuji.lmq.cloudamqp.com'
+rabbitmq_user = 'tbvqnboe'
+rabbitmq_pass = '2We4NDH_v8JhKtmj8edqWm7KDfqTFbcu'
+rabbitmq_vhost = 'tbvqnboe'
+queue_name = 'notificaciones'
+
+credentials = pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)
+context = ssl.create_default_context()
+parameters = pika.ConnectionParameters(
+    host=rabbitmq_host,
+    port=5671,
+    virtual_host=rabbitmq_vhost,
+    credentials=credentials,
+    ssl_options=pika.SSLOptions(context)
+)
+
+# Singleton de conexión y canal
+connection = pika.BlockingConnection(parameters)
+channel = connection.channel()
+channel_lock = threading.Lock()  # Protege el canal para concurrencia
+
 pending_messages = {}
 
 # Endpoint para recibir eventos y notificar por WebSocket
@@ -109,60 +131,33 @@ async def recibir_evento(request: Request):
 # Endpoint para obtener una alerta desde RabbitMQ
 @app.post("/get_alerta")
 def get_alerta():
-    rabbitmq_host = 'fuji.lmq.cloudamqp.com'
-    rabbitmq_user = 'tbvqnboe'
-    rabbitmq_pass = '2We4NDH_v8JhKtmj8edqWm7KDfqTFbcu'
-    rabbitmq_vhost = 'tbvqnboe'
-    queue_name = 'notificaciones'
-
-    credentials = pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)
-    context = ssl.create_default_context()
-    parameters = pika.ConnectionParameters(
-        host=rabbitmq_host,
-        port=5671,
-        virtual_host=rabbitmq_vhost,
-        credentials=credentials,
-        ssl_options=pika.SSLOptions(context)
-    )
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-
     timeout = 10  # segundos
     start_time = time.time()
-    while time.time() - start_time < timeout:
-        method_frame, header_frame, body = channel.basic_get(queue=queue_name, auto_ack=False)
-        if method_frame:
-            try:
-                data = json.loads(body)
-            except Exception:
-                data = body.decode()
-            delivery_tag = method_frame.delivery_tag
-            # Guarda el delivery_tag y el canal/conexión para ACK posterior
-            pending_messages[delivery_tag] = {
-                "body": body,
-                "channel": channel,
-                "connection": connection
-            }
-            # Devuelve el mensaje y el delivery_tag al frontend
-            return {
-                "mensaje": "Alerta recibida de RabbitMQ",
-                "data": data,
-                "delivery_tag": delivery_tag
-            }
-        time.sleep(1)
-    connection.close()
+    with channel_lock:
+        while time.time() - start_time < timeout:
+            method_frame, header_frame, body = channel.basic_get(queue=queue_name, auto_ack=False)
+            if method_frame:
+                try:
+                    data = json.loads(body)
+                except Exception:
+                    data = body.decode()
+                delivery_tag = method_frame.delivery_tag
+                pending_messages[delivery_tag] = {
+                    "body": body,
+                }
+                return {
+                    "mensaje": "Alerta recibida de RabbitMQ",
+                    "data": data,
+                    "delivery_tag": delivery_tag
+                }
+            time.sleep(1)
     return {"mensaje": "No hay alertas en la cola"}
 
 @app.post("/ack_alerta")
 def ack_alerta(delivery_tag: int = Body(...)):
-    # Busca el delivery_tag en el almacenamiento temporal
     msg_info = pending_messages.pop(delivery_tag, None)
     if not msg_info:
         return {"mensaje": "No se encontró el mensaje pendiente para ACK"}
-    channel = msg_info["channel"]
-    connection = msg_info["connection"]
-    # Hacer el ACK manualmente
-    channel.basic_ack(delivery_tag=delivery_tag)
-    channel.close()
-    connection.close()
+    with channel_lock:
+        channel.basic_ack(delivery_tag=delivery_tag)
     return {"mensaje": "Mensaje confirmado y eliminado de la cola"}

@@ -1,6 +1,6 @@
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 import logging
@@ -16,6 +16,9 @@ from services.usuario_service import UsuarioService
 from database.database import SessionLocal
 from bson import ObjectId
 import urllib.parse
+import requests
+import openai
+import os
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -181,3 +184,41 @@ async def recibir_webhook(data: WebhookRequest):
             "confidence_level": data.confidence_level
         }
     }
+
+
+# Configura tu API key de OpenAI (puedes usar variable de entorno)
+openai.api_key = os.getenv("OPENAI_API_KEY", "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")
+
+@router.post("/completar-campos")
+def completar_campos(alertData: dict = Body(...), camposVacios: list = Body(...)):
+    prompt = f"""
+    Eres un asistente policial. Tengo la siguiente información de alerta:
+    - Información: {alertData.get('alert_information')}
+    - Descripción: {alertData.get('descripcion')}
+    - Palabras clave: {', '.join(alertData.get('key_words', []))}
+    - Ubicación: {alertData.get('location') or alertData.get('ubicacion')}
+    - Fecha: {alertData.get('date') or alertData.get('fecha')}
+    - Hora: {alertData.get('time') or alertData.get('hora')}
+    - Nivel de confianza: {alertData.get('confidence_level') or alertData.get('nivelConfianza')}
+    - Transcripción video: {alertData.get('transcription_video')}
+    - Transcripción audio: {alertData.get('transcription_audio')}
+
+    Los siguientes campos del formulario están vacíos o incompletos: {', '.join(camposVacios)}.
+
+    Usando la información de la alerta, sugiere valores apropiados para estos campos. Devuelve la respuesta en formato JSON, con cada campo como clave y el valor sugerido como valor.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200
+        )
+        completados = response.choices[0].message['content'].strip()
+        import json
+        try:
+            completados_json = json.loads(completados)
+            return {"completados": completados_json}
+        except Exception:
+            return {"completados": completados}
+    except Exception as e:
+        return {"error": str(e)}
