@@ -1,0 +1,8 @@
+version: "2"
+authtoken: YOUR_AUTH_TOKEN_HERE
+tunnels:
+  kuntur-api:
+    addr: 8000
+    proto: http
+    subdomain: kuntur-api
+    inspect: true 
