@@ -1,6 +1,6 @@
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 import logging
@@ -16,11 +16,11 @@ from services.usuario_service import UsuarioService
 from database.database import SessionLocal
 from bson import ObjectId
 import urllib.parse
-from fastapi import HTTPException
-from uuid import uuid4
 
-# Almacén temporal en memoria para notificaciones
-notificaciones_temporales = {}
+import requests
+import openai
+import os
+
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -202,27 +202,41 @@ async def recibir_webhook(data: WebhookRequest):
         }
     }
 
-@router.post("/notifications", summary="Recibe notificaciones externas", tags=["Notifications"])
-async def recibir_notificacion_externa(data: dict):
-    """
-    Recibe una notificación externa con cualquier body y la almacena temporalmente para revisión y enriquecimiento.
-    """
-    notification_id = str(uuid4())
-    notificaciones_temporales[notification_id] = data
-    return {"id": notification_id, "mensaje": "Notificación recibida temporalmente", "data": data}
 
-@router.get("/notifications", summary="Lista todas las notificaciones temporales", tags=["Notifications"])
-async def listar_notificaciones_temporales():
-    """
-    Devuelve la lista de notificaciones temporales recibidas.
-    """
-    return [{"id": k, **v} for k, v in notificaciones_temporales.items()]
 
-@router.get("/notifications/{notification_id}", summary="Consulta una notificación temporal por ID", tags=["Notifications"])
-async def obtener_notificacion_temporal(notification_id: str):
+# Configura tu API key de OpenAI (puedes usar variable de entorno)
+openai.api_key = os.getenv("OPENAI_API_KEY", "")
+
+@router.post("/completar-campos")
+def completar_campos(alertData: dict = Body(...), camposVacios: list = Body(...)):
+    prompt = f"""
+    Eres un asistente policial. Tengo la siguiente información de alerta:
+    - Información: {alertData.get('alert_information')}
+    - Descripción: {alertData.get('descripcion')}
+    - Palabras clave: {', '.join(alertData.get('key_words', []))}
+    - Ubicación: {alertData.get('location') or alertData.get('ubicacion')}
+    - Fecha: {alertData.get('date') or alertData.get('fecha')}
+    - Hora: {alertData.get('time') or alertData.get('hora')}
+    - Nivel de confianza: {alertData.get('confidence_level') or alertData.get('nivelConfianza')}
+    - Transcripción video: {alertData.get('transcription_video')}
+    - Transcripción audio: {alertData.get('transcription_audio')}
+
+    Los siguientes campos del formulario están vacíos o incompletos: {', '.join(camposVacios)}.
+
+    Usando la información de la alerta, sugiere valores apropiados para estos campos. Devuelve la respuesta en formato JSON, con cada campo como clave y el valor sugerido como valor.
     """
-    Devuelve una notificación temporal específica por su ID.
-    """
-    if notification_id not in notificaciones_temporales:
-        raise HTTPException(status_code=404, detail="Notificación no encontrada")
-    return {"id": notification_id, **notificaciones_temporales[notification_id]}
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200
+        )
+        completados = response.choices[0].message['content'].strip()
+        import json
+        try:
+            completados_json = json.loads(completados)
+            return {"completados": completados_json}
+        except Exception:
+            return {"completados": completados}
+    except Exception as e:
+        return {"error": str(e)}
