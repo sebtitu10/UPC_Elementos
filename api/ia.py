@@ -16,9 +16,11 @@ from services.usuario_service import UsuarioService
 from database.database import SessionLocal
 from bson import ObjectId
 import urllib.parse
+
 import requests
 import openai
 import os
+
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +57,21 @@ class WebhookRequest(BaseModel):
     media_duration: int = Field(..., example=120)
     key_words: List[str] = Field(..., example=["robo", "arma", "moto"])
     confidence_level: float = Field(..., example=0.92)
+    user: Optional[str] = Field(None, example="usuario123")
+    alerta: Optional[str] = Field(None, example="Robo en la vía pública")
+    coordenadas: Optional[Dict[str, float]] = Field(None, example={"lat": -2.2083, "lng": -79.9415})
+    descripcion: Optional[str] = Field(None, example="Se reporta un robo en la Av. Principal...")
+    dispositivo: Optional[Dict[str, str]] = Field(None, example={"tipo": "RADIO", "id": "12345", "ip": "192.168.1.1"})
+    duracionVideo: Optional[int] = Field(None, example=120)
+    fecha: Optional[str] = Field(None, example="10/05/2022")
+    hora: Optional[str] = Field(None, example="13:30")
+    nivelConfianza: Optional[float] = Field(None, example=0.95)
+    nombrePolicia: Optional[str] = Field(None, example="ARISTEGA VERA FABIAN JONATHAN")
+    palabrasClave: Optional[str] = Field(None, example="robo, flagrancia, patrullaje")
+    pnc: Optional[str] = Field(None, example="0923438865")
+    rango: Optional[str] = Field(None, example="SGO")
+    ubicacion: Optional[str] = Field(None, example="Av. Principal y Calle Secundaria")
+    codigoDelito: Optional[str] = Field(None, example="1234")
 
     class Config:
         from_attributes = True
@@ -107,7 +124,7 @@ async def recibir_alerta(data: AlertaRequest):
             nombre_pdf,
             "pdfs",           # Tu repo
             "ejcondorf88",             # Tu usuario
-            "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"  # Tu token
+            "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"  # Tu token
         )
         print(f"PDF subido a GitHub Pages: {url_publica}")
         if telefono_usuario and url_publica:
@@ -186,8 +203,9 @@ async def recibir_webhook(data: WebhookRequest):
     }
 
 
+
 # Configura tu API key de OpenAI (puedes usar variable de entorno)
-openai.api_key = os.getenv("OPENAI_API_KEY", "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")
+openai.api_key = os.getenv("OPENAI_API_KEY", "")
 
 @router.post("/completar-campos")
 def completar_campos(alertData: dict = Body(...), camposVacios: list = Body(...)):
